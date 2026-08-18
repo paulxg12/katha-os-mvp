@@ -52,7 +52,7 @@ const INITIAL_VENDOR: Vendor = {
   craft: "Master Banarasi Silk Weaver",
   region: "Varanasi, Uttar Pradesh",
   bio: "Third-generation master weaver preserving the royal Banarasi silk heritage. Operating 4 traditional handlooms, specializing in pure silk, Kadhwa technique, and hand-embroidered gold zari borders.",
-  avatar_url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300",
+  avatar_url: null,
   phone: "+91 98765 43210",
   email: "lakshmi.banaras@kathaos.org",
   address: "B-14/92 Weaver Colony, Loom Street, Varanasi, UP - 221001",
@@ -247,9 +247,9 @@ export function useVendorStore() {
   // Load from localStorage on mount
   useEffect(() => {
     try {
-      const savedVendor = localStorage.getItem("kathaos_vendor_v2")
-      const savedProducts = localStorage.getItem("kathaos_products_v2")
-      const savedOrders = localStorage.getItem("kathaos_orders_v2")
+      const savedVendor = localStorage.getItem("kathaos_vendor_v3")
+      const savedProducts = localStorage.getItem("kathaos_products_v3")
+      const savedOrders = localStorage.getItem("kathaos_orders_v3")
 
       if (savedVendor) setVendor(JSON.parse(savedVendor))
       if (savedProducts) setProducts(JSON.parse(savedProducts))
@@ -267,7 +267,7 @@ export function useVendorStore() {
     setVendor((prev) => {
       const next = { ...prev, ...updated }
       try {
-        localStorage.setItem("kathaos_vendor_v2", JSON.stringify(next))
+        localStorage.setItem("kathaos_vendor_v3", JSON.stringify(next))
       } catch (e) {
         console.error("Error saving vendor to localStorage", e)
       }

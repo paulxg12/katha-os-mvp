@@ -42,9 +42,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        serif: ["var(--font-playfair)", "Playfair Display", "Georgia", "serif"],
-        sans: ["var(--font-inter)", "Inter", "sans-serif"],
-        display: ["var(--font-playfair)", "Playfair Display", "serif"],
+        serif: ["Helvetica", "Helvetica Neue", "Arial", "sans-serif"],
+        sans: ["Helvetica", "Helvetica Neue", "Arial", "sans-serif"],
+        display: ["Helvetica", "Helvetica Neue", "Arial", "sans-serif"],
       },
       boxShadow: {
         organic: "0 10px 30px -10px rgba(78, 93, 140, 0.12)",

@@ -41,7 +41,7 @@ export function Avatar({ src, name, size = "md", className, showBadge = false }:
       ) : (
         <div
           className={cn(
-            "rounded-full flex items-center justify-center font-serif font-bold text-white bg-gradient-to-br from-ochre to-ochre-dark border-2 border-parchment-border shadow-sm",
+            "rounded-full flex items-center justify-center font-bold tracking-tight text-white bg-gradient-to-br from-ochre via-ochre-container to-ochre-dark border-2 border-parchment-border shadow-organic",
             sizeClasses[size],
             className
           )}
@@ -51,9 +51,11 @@ export function Avatar({ src, name, size = "md", className, showBadge = false }:
       )}
       {showBadge && (
         <span
-          className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"
+          className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] text-white font-bold"
           title="Verified Master Artisan"
-        />
+        >
+          ✓
+        </span>
       )}
     </div>
   )

@@ -1,13 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --font-playfair: 'Playfair Display', Georgia, serif;
-    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-helvetica: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   }
 
   html {
@@ -21,13 +18,14 @@
   body {
     background-color: #FDF7F0;
     color: #001F29;
-    font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+    font-family: var(--font-helvetica), 'Helvetica Neue', Helvetica, Arial, sans-serif;
     min-height: 100vh;
     overscroll-behavior: none;
   }
 
-  h1, h2, h3, h4, .font-serif {
-    font-family: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  h1, h2, h3, h4, .font-serif, .font-sans {
+    font-family: var(--font-helvetica), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    letter-spacing: -0.015em;
   }
 
   /* Remove spin buttons from number inputs */
