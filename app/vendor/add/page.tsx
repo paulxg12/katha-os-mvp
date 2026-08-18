@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useVendorStore } from "@/lib/hooks/useVendorStore"
+import { useVendorStore, CRAFT_IMAGE_COLLECTION, triggerHaptic } from "@/lib/hooks/useVendorStore"
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition"
 import { BottomNav } from "@/components/layout/BottomNav"
 import { Badge } from "@/components/ui/Badge"
@@ -44,13 +44,6 @@ const navItems = [
   },
 ]
 
-const SAMPLE_IMAGES = [
-  "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=600",
-  "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=600",
-  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=600",
-  "https://images.unsplash.com/photo-1606744837616-56c9a5c6a6eb?auto=format&fit=crop&q=80&w=600",
-]
-
 type Mode = "voice" | "manual"
 type RecordingStep = "idle" | "recording" | "processing" | "result"
 
@@ -59,22 +52,20 @@ export default function VendorAddPage() {
   const { addProduct } = useVendorStore()
   const [mode, setMode] = useState<Mode>("voice")
   const [step, setStep] = useState<RecordingStep>("idle")
-  const [selectedImage, setSelectedImage] = useState<string>(SAMPLE_IMAGES[0])
+  const [selectedImage, setSelectedImage] = useState<string>(CRAFT_IMAGE_COLLECTION[0].url)
 
   const { transcript, isListening, startListening, stopListening, resetTranscript } =
     useSpeechRecognition()
 
-  // Extracted product state for voice mode
   const [extractedProduct, setExtractedProduct] = useState({
     title: "Handwoven Crimson Banarasi Silk Saree",
     category: "Textile & Apparel",
-    price: 14500,
-    materials: ["Pure Silk", "Real Gold Zari"],
+    price: 18500,
+    materials: ["Pure Mulberry Silk", "Real Gold Zari"],
     summary: "Pure Mulberry silk saree handwoven with intricate gold zari floral border. Crafted over 22 days in Varanasi.",
     heritage_story: "This saree embodies the ancient Kadhwa weaving technique of Varanasi. Passed down through 3 generations of master weavers.",
   })
 
-  // Form state for manual mode
   const [manualForm, setManualForm] = useState({
     title: "",
     category: "Textile & Apparel",
@@ -85,10 +76,14 @@ export default function VendorAddPage() {
   })
 
   const handleMicToggle = async () => {
+    triggerHaptic(25)
     if (isListening) {
       stopListening()
       setStep("processing")
-      processExtraction(transcript || "This is a handwoven Banarasi silk saree in deep crimson with real gold zari. It took 20 days on the handloom and is priced at 14500 rupees.")
+      processExtraction(
+        transcript ||
+          "This is a handwoven Banarasi silk saree in deep crimson with real gold zari. It took 20 days on the handloom and is priced at 18500 rupees."
+      )
     } else {
       resetTranscript()
       startListening()
@@ -109,7 +104,7 @@ export default function VendorAddPage() {
           setExtractedProduct({
             title: data.product.title || "Handwoven Banarasi Craft",
             category: data.product.category || "Textile & Apparel",
-            price: data.product.price || 14500,
+            price: data.product.price || 18500,
             materials: data.product.materials || ["Pure Silk", "Gold Zari"],
             summary: data.product.summary || "Traditional handloom craft listing.",
             heritage_story: data.heritage.story || "Handcrafted with ancestral heritage techniques.",
@@ -117,9 +112,12 @@ export default function VendorAddPage() {
         }
       }
     } catch (e) {
-      console.warn("AI backend extraction API offline, using standard structured fallback", e)
+      console.warn("Using structured fallback extraction engine", e)
     } finally {
-      setTimeout(() => setStep("result"), 1200)
+      setTimeout(() => {
+        triggerHaptic([30, 30, 30])
+        setStep("result")
+      }, 1000)
     }
   }
 
@@ -146,12 +144,12 @@ export default function VendorAddPage() {
       .filter(Boolean)
 
     addProduct({
-      title: manualForm.title,
+      title: manualForm.title || "Handcrafted Heritage Artifact",
       category: manualForm.category,
-      materials: mats.length > 0 ? mats : ["Handloom"],
-      price: Number(manualForm.price),
-      summary: manualForm.summary,
-      heritage_story: manualForm.heritage_story,
+      materials: mats.length > 0 ? mats : ["Handloom Silk"],
+      price: Number(manualForm.price) || 4500,
+      summary: manualForm.summary || "Handmade by master artisans.",
+      heritage_story: manualForm.heritage_story || "Preserving traditional Indian craft heritage.",
       image_url: selectedImage,
       transcript_raw: null,
       status: "active",
@@ -167,6 +165,7 @@ export default function VendorAddPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/vendor"
+              onClick={() => triggerHaptic(10)}
               className="p-2 -ml-2 rounded-full hover:bg-parchment-border/40 text-charcoal transition"
             >
               ← Back
@@ -181,7 +180,10 @@ export default function VendorAddPage() {
         {/* Mode Toggle Switch */}
         <div className="mt-4 flex p-1 bg-parchment rounded-full border border-parchment-border">
           <button
-            onClick={() => setMode("voice")}
+            onClick={() => {
+              triggerHaptic(15)
+              setMode("voice")
+            }}
             className={`flex-1 py-2 px-4 rounded-full text-xs font-bold uppercase tracking-wider transition ${
               mode === "voice"
                 ? "bg-gradient-to-r from-ochre to-ochre-dark text-white shadow-sm"
@@ -191,7 +193,10 @@ export default function VendorAddPage() {
             🎙 Voice-First (Zero UI)
           </button>
           <button
-            onClick={() => setMode("manual")}
+            onClick={() => {
+              triggerHaptic(15)
+              setMode("manual")
+            }}
             className={`flex-1 py-2 px-4 rounded-full text-xs font-bold uppercase tracking-wider transition ${
               mode === "manual"
                 ? "bg-gradient-to-r from-ochre to-ochre-dark text-white shadow-sm"
@@ -225,8 +230,8 @@ export default function VendorAddPage() {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal-muted text-center">
                   Try speaking something like:
                 </p>
-                <div className="bg-parchment-card p-3 rounded-2xl border border-parchment-border text-xs text-charcoal-muted italic">
-                  &ldquo;Yeh Banarasi silk saree humne gold zari se 20 din mein buni hai. Iska daam 14,500 rupees hai.&rdquo;
+                <div className="bg-parchment-card p-3.5 rounded-2xl border border-parchment-border text-xs text-charcoal-muted italic">
+                  &ldquo;Yeh Banarasi silk saree humne gold zari se 20 din mein buni hai. Iska daam 18,500 rupees hai.&rdquo;
                 </div>
               </div>
 
@@ -287,22 +292,25 @@ export default function VendorAddPage() {
                 <h2 className="text-xl font-serif font-bold text-charcoal mt-1">Review Extracted Details</h2>
               </div>
 
-              {/* Image Selector */}
+              {/* High-Res Craft Image Selector */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-2">
-                  Select Product Image
+                  Select Product Craft Image
                 </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {SAMPLE_IMAGES.map((img, i) => (
+                  {CRAFT_IMAGE_COLLECTION.map((item, i) => (
                     <button
                       type="button"
                       key={i}
-                      onClick={() => setSelectedImage(img)}
+                      onClick={() => {
+                        triggerHaptic(10)
+                        setSelectedImage(item.url)
+                      }}
                       className={`aspect-square rounded-2xl overflow-hidden border-2 transition ${
-                        selectedImage === img ? "border-ochre shadow-organic scale-105" : "border-parchment-border opacity-70"
+                        selectedImage === item.url ? "border-ochre shadow-organic scale-105" : "border-parchment-border opacity-70"
                       }`}
                     >
-                      <img src={img} alt={`Sample ${i}`} className="w-full h-full object-cover" />
+                      <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -329,7 +337,7 @@ export default function VendorAddPage() {
 
                 <div className="pt-2 border-t border-parchment-border">
                   <span className="text-[10px] uppercase font-bold text-charcoal-muted">Materials</span>
-                  <div className="flex gap-1.5 mt-1">
+                  <div className="flex flex-wrap gap-1.5 mt-1">
                     {extractedProduct.materials.map((m) => (
                       <span key={m} className="px-2.5 py-0.5 bg-parchment rounded-full text-[10px] font-semibold text-charcoal border border-parchment-border">
                         {m}
@@ -351,6 +359,7 @@ export default function VendorAddPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => {
+                    triggerHaptic(15)
                     resetTranscript()
                     setStep("idle")
                   }}
@@ -380,7 +389,6 @@ export default function VendorAddPage() {
               </label>
               <input
                 type="text"
-                required
                 placeholder="e.g. Pure Silk Banarasi Saree with Gold Border"
                 value={manualForm.title}
                 onChange={(e) => setManualForm({ ...manualForm, title: e.target.value })}
@@ -412,8 +420,7 @@ export default function VendorAddPage() {
                 </label>
                 <input
                   type="number"
-                  required
-                  placeholder="e.g. 12500"
+                  placeholder="e.g. 18500"
                   value={manualForm.price}
                   onChange={(e) => setManualForm({ ...manualForm, price: e.target.value })}
                   className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm font-bold text-charcoal focus:outline-none focus:border-ochre"
@@ -463,19 +470,22 @@ export default function VendorAddPage() {
             {/* Select image */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-2">
-                Select Photo
+                Select Photo Asset
               </label>
               <div className="grid grid-cols-4 gap-2">
-                {SAMPLE_IMAGES.map((img, i) => (
+                {CRAFT_IMAGE_COLLECTION.map((item, i) => (
                   <button
                     type="button"
                     key={i}
-                    onClick={() => setSelectedImage(img)}
+                    onClick={() => {
+                      triggerHaptic(10)
+                      setSelectedImage(item.url)
+                    }}
                     className={`aspect-square rounded-2xl overflow-hidden border-2 transition ${
-                      selectedImage === img ? "border-ochre shadow-organic scale-105" : "border-parchment-border opacity-70"
+                      selectedImage === item.url ? "border-ochre shadow-organic scale-105" : "border-parchment-border opacity-70"
                     }`}
                   >
-                    <img src={img} alt={`Sample ${i}`} className="w-full h-full object-cover" />
+                    <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
