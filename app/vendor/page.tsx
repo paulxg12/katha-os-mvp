@@ -1,64 +1,14 @@
 "use client"
 
+import { useState } from "react"
+import Link from "next/link"
+import { useVendorStore } from "@/lib/hooks/useVendorStore"
 import { Avatar } from "@/components/ui/Avatar"
 import { Badge } from "@/components/ui/Badge"
 import { StatCard } from "@/components/ui/StatCard"
-import { PageHeader } from "@/components/ui/PageHeader"
 import { BottomNav } from "@/components/layout/BottomNav"
-import type { Vendor, Product } from "@/types"
-
-const mockVendor: Vendor = {
-  id: "v1",
-  name: "Lakshmi Devi",
-  craft: "Banarasi Weaving",
-  region: "Varanasi, Uttar Pradesh",
-  bio: "Third-generation weaver crafting Banarasi silk sarees. Each piece takes 15-30 days on the handloom.",
-  avatar_url: null,
-  phone: "+91 98765 43210",
-  joined_at: "2025-11-15",
-}
-
-const mockProducts: Product[] = [
-  {
-    id: "p1",
-    vendor_id: "v1",
-    title: "Banarasi Silk Saree — Red & Gold",
-    category: "Textile",
-    materials: ["Silk", "Gold Zari"],
-    price: 12500,
-    summary: "Handwoven pure silk saree with intricate gold zari border. Takes 20 days on the loom.",
-    image_url: null,
-    transcript_raw: null,
-    status: "active",
-    created_at: "2025-12-01",
-  },
-  {
-    id: "p2",
-    vendor_id: "v1",
-    title: "Banarasi Dupatta — Peacock Motif",
-    category: "Textile",
-    materials: ["Silk", "Silver Zari"],
-    price: 4200,
-    summary: "Lightweight silk dupatta with peacock motif in silver zari. Perfect for festive occasions.",
-    image_url: null,
-    transcript_raw: null,
-    status: "active",
-    created_at: "2025-12-10",
-  },
-  {
-    id: "p3",
-    vendor_id: "v1",
-    title: "Banarasi Stole — Pastel Blue",
-    category: "Textile",
-    materials: ["Silk", "Gold Zari"],
-    price: 3800,
-    summary: "Contemporary pastel stole with traditional butti work. Blends modern palette with heritage craft.",
-    image_url: null,
-    transcript_raw: null,
-    status: "sold",
-    created_at: "2025-11-20",
-  },
-]
+import { ONDCExportModal } from "@/components/vendor/ONDCExportModal"
+import type { Product } from "@/types"
 
 function VendorNavIcon({ d }: { d: string }) {
   return (
@@ -82,13 +32,7 @@ const navItems = [
   {
     label: "Add",
     href: "/vendor/add",
-    icon: (
-      <div className="w-10 h-10 -mt-5 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </div>
-    ),
+    icon: null,
   },
   {
     label: "Earnings",
@@ -103,150 +47,235 @@ const navItems = [
 ]
 
 export default function VendorDashboardPage() {
-  const activeProducts = mockProducts.filter((p) => p.status === "active")
-  const soldProducts = mockProducts.filter((p) => p.status === "sold")
-  const totalEarnings = soldProducts.reduce((sum, p) => sum + p.price, 0)
+  const { vendor, products, orders, isLoaded, toggleONDCStatus } = useVendorStore()
+  const [selectedONDCProduct, setSelectedONDCProduct] = useState<Product | null>(null)
+
+  const activeProducts = products.filter((p) => p.status === "active")
+  const soldProducts = products.filter((p) => p.status === "sold")
+  const totalRevenue = orders.reduce((sum, o) => sum + o.amount, 0)
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-ochre border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
-      <div className="bg-white px-5 pt-14 pb-6 border-b border-gray-100">
-        <div className="flex items-center gap-4">
-          <Avatar name={mockVendor.name} size="lg" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-gray-900 truncate">{mockVendor.name}</h1>
-              <Badge variant="success">Verified</Badge>
+    <main className="min-h-screen bg-parchment pb-28">
+      {/* Artisan Profile Header */}
+      <div className="bg-parchment-card px-5 pt-12 pb-6 border-b border-parchment-border shadow-2xs">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <Avatar src={vendor.avatar_url} name={vendor.name} size="lg" showBadge />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-serif font-bold text-charcoal truncate">{vendor.name}</h1>
+                <Badge variant="ochre" className="text-[10px]">Verified Master</Badge>
+              </div>
+              <p className="text-xs font-semibold text-ochre truncate">{vendor.craft}</p>
+              <div className="flex items-center gap-2 text-xs text-charcoal-muted mt-0.5">
+                <span>📍 {vendor.region}</span>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 truncate">{mockVendor.craft}</p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+          </div>
+          <Link
+            href="/vendor/profile"
+            className="py-2 px-3 bg-parchment border border-parchment-border text-charcoal text-xs font-semibold rounded-full hover:bg-parchment-border/40 transition shrink-0"
+          >
+            My Profile
+          </Link>
+        </div>
+
+        {/* ONDC Node Status Strip */}
+        <div className="mt-4 p-3 rounded-2xl bg-parchment/80 border border-parchment-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                vendor.ondc_status === "active" ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+              }`}
+            />
+            <span className="text-xs font-medium text-charcoal">
+              ONDC Node: <strong className="font-semibold">{vendor.ondc_status === "active" ? "Live Broadcast" : "Offline"}</strong>
+            </span>
+          </div>
+          <button
+            onClick={toggleONDCStatus}
+            className="text-[11px] font-bold text-ochre hover:underline uppercase tracking-wider"
+          >
+            Switch {vendor.ondc_status === "active" ? "Offline" : "Live"}
+          </button>
+        </div>
+      </div>
+
+      {/* Hero Voice Creation CTA */}
+      <div className="px-5 mt-6">
+        <div className="bg-gradient-to-br from-ochre to-ochre-dark text-white rounded-3xl p-6 shadow-organic border border-ochre-container relative overflow-hidden">
+          <div className="relative z-10 flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
               </svg>
-              <span className="text-xs text-gray-400">{mockVendor.region}</span>
+            </div>
+            <div className="flex-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ochre-light">Zero-UI Voice Engine</span>
+              <h2 className="text-lg font-serif font-bold text-white mt-0.5">Speak & List New Craft</h2>
+              <p className="text-xs text-white/80 mt-1 leading-relaxed">
+                Describe your handloom or handicraft item in your mother tongue. KathaOS automatically extracts price, materials, and cultural story.
+              </p>
+              <Link
+                href="/vendor/add"
+                className="inline-flex items-center gap-2 mt-4 bg-parchment text-ochre font-bold text-xs px-5 py-2.5 rounded-full hover:bg-white transition shadow-sm"
+              >
+                🎙 Start Voice Recording
+                <span>→</span>
+              </Link>
             </div>
           </div>
         </div>
-        {mockVendor.bio && (
-          <p className="text-sm text-gray-600 mt-4 leading-relaxed">{mockVendor.bio}</p>
-        )}
       </div>
 
-      {/* Stats */}
-      <div className="px-5 py-6">
+      {/* Performance Stats */}
+      <div className="px-5 mt-6">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-3">Store Metrics</h3>
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Products" value={activeProducts.length} />
-          <StatCard label="Sold" value={soldProducts.length} />
+          <StatCard label="Active Items" value={activeProducts.length} subtext="ONDC Synced" />
+          <StatCard label="Items Sold" value={soldProducts.length} subtext="Fulfilled" />
           <StatCard
-            label="Earned"
-            value={`₹${totalEarnings.toLocaleString("en-IN")}`}
+            label="Revenue"
+            value={`₹${totalRevenue.toLocaleString("en-IN")}`}
+            variant="ochre"
           />
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="px-5 pb-6">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h2>
+      {/* Quick Access Menu */}
+      <div className="px-5 mt-6">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-3">Quick Navigation</h3>
         <div className="grid grid-cols-2 gap-3">
-          <a
+          <Link
             href="/vendor/add"
-            className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition"
+            className="flex items-center gap-3.5 bg-parchment-card rounded-3xl p-4 border border-parchment-border shadow-organic hover:border-ochre/40 transition"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="w-10 h-10 rounded-2xl bg-ochre-fixed text-ochre-dark flex items-center justify-center font-bold">
+              🎙
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">Add Product</p>
-              <p className="text-xs text-gray-500">Voice or manual</p>
+              <p className="text-sm font-serif font-bold text-charcoal">Add Product</p>
+              <p className="text-[11px] text-charcoal-muted">Voice & Manual</p>
             </div>
-          </a>
-          <a
+          </Link>
+
+          <Link
             href="/vendor/products"
-            className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition"
+            className="flex items-center gap-3.5 bg-parchment-card rounded-3xl p-4 border border-parchment-border shadow-organic hover:border-ochre/40 transition"
           >
-            <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
-              <svg className="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-              </svg>
+            <div className="w-10 h-10 rounded-2xl bg-indigo-fixed text-indigo-dark flex items-center justify-center font-bold">
+              📦
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">My Products</p>
-              <p className="text-xs text-gray-500">{activeProducts.length} active</p>
+              <p className="text-sm font-serif font-bold text-charcoal">My Catalog</p>
+              <p className="text-[11px] text-charcoal-muted">{products.length} Products</p>
             </div>
-          </a>
+          </Link>
         </div>
       </div>
 
-      {/* Recent Products */}
-      <div className="px-5 pb-6">
+      {/* Recent Catalog Items */}
+      <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-900">Recent Products</h2>
-          <a href="/vendor/products" className="text-xs text-blue-600 font-medium">
-            View all
-          </a>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal-muted">Recent Catalog Listings</h3>
+          <Link href="/vendor/products" className="text-xs text-ochre font-bold hover:underline">
+            View All ({products.length})
+          </Link>
         </div>
         <div className="space-y-3">
-          {mockProducts.slice(0, 3).map((product) => (
-            <a
+          {products.slice(0, 3).map((product) => (
+            <div
               key={product.id}
-              href={`/buyer/${product.id}`}
-              className="flex items-center gap-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+              className="bg-parchment-card rounded-3xl p-4 border border-parchment-border shadow-organic flex items-center justify-between gap-3"
             >
-              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl">
-                  {product.category === "Textile" ? "🧵" : product.category === "Pottery" ? "🏺" : "✨"}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{product.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{product.materials.join(" · ")}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm font-bold text-gray-900">
-                    ₹{product.price.toLocaleString("en-IN")}
-                  </span>
-                  <Badge variant={product.status === "active" ? "success" : "muted"}>
-                    {product.status}
-                  </Badge>
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-14 h-14 rounded-2xl bg-parchment overflow-hidden border border-parchment-border flex items-center justify-center shrink-0">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">🧵</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-serif font-bold text-charcoal truncate">{product.title}</h4>
+                  <p className="text-xs text-charcoal-muted truncate mt-0.5">
+                    {product.materials.join(" · ")}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm font-bold text-charcoal">
+                      ₹{product.price.toLocaleString("en-IN")}
+                    </span>
+                    <Badge variant={product.status === "active" ? "success" : "muted"}>
+                      {product.status}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </a>
+
+              <button
+                onClick={() => setSelectedONDCProduct(product)}
+                className="py-1.5 px-3 bg-parchment border border-parchment-border text-[11px] font-bold text-indigo-dark rounded-full hover:bg-indigo-fixed/40 transition shrink-0"
+              >
+                ONDC JSON
+              </button>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Voice CTA */}
-      <div className="px-5 pb-6">
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-              </svg>
+      {/* Recent ONDC Network Orders */}
+      <div className="px-5 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal-muted">Recent ONDC Orders</h3>
+          <Link href="/vendor/earnings" className="text-xs text-ochre font-bold hover:underline">
+            Earnings Details
+          </Link>
+        </div>
+        <div className="space-y-3">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="bg-parchment-card rounded-3xl p-4 border border-parchment-border shadow-organic flex items-center justify-between text-xs"
+            >
+              <div>
+                <span className="font-mono text-[10px] text-charcoal-muted font-bold">{order.order_number}</span>
+                <p className="font-serif font-bold text-charcoal text-sm mt-0.5">{order.product_title}</p>
+                <p className="text-charcoal-muted mt-0.5">Buyer: {order.buyer_name} · {order.date}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-charcoal">₹{order.amount.toLocaleString("en-IN")}</p>
+                <Badge
+                  variant={
+                    order.status === "delivered"
+                      ? "success"
+                      : order.status === "shipped"
+                      ? "info"
+                      : "warning"
+                  }
+                  className="mt-1"
+                >
+                  {order.status}
+                </Badge>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold">Add a product by voice</h3>
-              <p className="text-sm text-blue-100 mt-1">
-                Just speak about your craft. KathaOS extracts the details automatically.
-              </p>
-              <a
-                href="/vendor/add"
-                className="inline-flex items-center gap-2 mt-3 bg-white text-blue-600 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition"
-              >
-                Start recording
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-              </a>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
+
+      <ONDCExportModal
+        isOpen={!!selectedONDCProduct}
+        onClose={() => setSelectedONDCProduct(null)}
+        product={selectedONDCProduct}
+        vendor={vendor}
+      />
 
       <BottomNav items={navItems} />
     </main>

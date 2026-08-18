@@ -1,66 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Avatar } from "@/components/ui/Avatar"
-import { Badge } from "@/components/ui/Badge"
+import Link from "next/link"
+import { useVendorStore } from "@/lib/hooks/useVendorStore"
 import { PageHeader } from "@/components/ui/PageHeader"
+import { Badge } from "@/components/ui/Badge"
 import { BottomNav } from "@/components/layout/BottomNav"
+import { EditProductModal } from "@/components/vendor/EditProductModal"
+import { ONDCExportModal } from "@/components/vendor/ONDCExportModal"
 import type { Product } from "@/types"
-
-const mockProducts: Product[] = [
-  {
-    id: "p1",
-    vendor_id: "v1",
-    title: "Banarasi Silk Saree — Red & Gold",
-    category: "Textile",
-    materials: ["Silk", "Gold Zari"],
-    price: 12500,
-    summary: "Handwoven pure silk saree with intricate gold zari border. Takes 20 days on the loom.",
-    image_url: null,
-    transcript_raw: null,
-    status: "active",
-    created_at: "2025-12-01",
-  },
-  {
-    id: "p2",
-    vendor_id: "v1",
-    title: "Banarasi Dupatta — Peacock Motif",
-    category: "Textile",
-    materials: ["Silk", "Silver Zari"],
-    price: 4200,
-    summary: "Lightweight silk dupatta with peacock motif in silver zari.",
-    image_url: null,
-    transcript_raw: null,
-    status: "active",
-    created_at: "2025-12-10",
-  },
-  {
-    id: "p3",
-    vendor_id: "v1",
-    title: "Banarasi Stole — Pastel Blue",
-    category: "Textile",
-    materials: ["Silk", "Gold Zari"],
-    price: 3800,
-    summary: "Contemporary pastel stole with traditional butti work.",
-    image_url: null,
-    transcript_raw: null,
-    status: "sold",
-    created_at: "2025-11-20",
-  },
-  {
-    id: "p4",
-    vendor_id: "v1",
-    title: "Banarasi Table Runner — Maroon",
-    category: "Home Decor",
-    materials: ["Silk", "Gold Zari"],
-    price: 2800,
-    summary: "Elegant table runner with floral motifs. Perfect for festive dining.",
-    image_url: null,
-    transcript_raw: null,
-    status: "active",
-    created_at: "2025-12-15",
-  },
-]
 
 function VendorNavIcon({ d }: { d: string }) {
   return (
@@ -84,13 +32,7 @@ const navItems = [
   {
     label: "Add",
     href: "/vendor/add",
-    icon: (
-      <div className="w-10 h-10 -mt-5 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </div>
-    ),
+    icon: null,
   },
   {
     label: "Earnings",
@@ -107,101 +49,212 @@ const navItems = [
 type FilterType = "all" | "active" | "sold" | "draft"
 
 export default function VendorProductsPage() {
+  const { vendor, products, updateProduct, deleteProduct, isLoaded } = useVendorStore()
   const [filter, setFilter] = useState<FilterType>("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [exportingProduct, setExportingProduct] = useState<Product | null>(null)
 
-  const filtered = filter === "all" ? mockProducts : mockProducts.filter((p) => p.status === filter)
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-parchment flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-ochre border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const filteredProducts = products.filter((p) => {
+    const matchesFilter = filter === "all" ? true : p.status === filter
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.materials.some((m) => m.toLowerCase().includes(searchQuery.toLowerCase()))
+    return matchesFilter && matchesSearch
+  })
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-white px-5 pt-14 pb-4 border-b border-gray-100">
-        <PageHeader title="My Products" subtitle={`${mockProducts.length} total listings`} />
+    <main className="min-h-screen bg-parchment pb-28">
+      {/* Header */}
+      <div className="bg-parchment-card px-5 pt-12 pb-5 border-b border-parchment-border shadow-2xs">
+        <PageHeader
+          title="My Craft Catalog"
+          subtitle={`${products.length} total listings · Broadcasted to ONDC Network`}
+          action={
+            <Link
+              href="/vendor/add"
+              className="py-2 px-4 bg-gradient-to-r from-ochre to-ochre-dark text-white font-bold text-xs rounded-full hover:opacity-95 shadow-organic transition flex items-center gap-1.5"
+            >
+              🎙 Voice Add
+            </Link>
+          }
+        />
+
+        {/* Search Bar */}
+        <div className="mt-4 relative">
+          <input
+            type="text"
+            placeholder="Search by title, material, or category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-parchment border border-parchment-border rounded-full text-xs font-medium text-charcoal focus:outline-none focus:border-ochre shadow-inner"
+          />
+          <svg className="w-4 h-4 text-charcoal-muted absolute left-3.5 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Filter Tabs */}
       <div className="px-5 py-4">
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {(["all", "active", "sold", "draft"] as FilterType[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                filter === f
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-              {f === "all" && ` (${mockProducts.length})`}
-              {f === "active" && ` (${mockProducts.filter((p) => p.status === "active").length})`}
-              {f === "sold" && ` (${mockProducts.filter((p) => p.status === "sold").length})`}
-              {f === "draft" && " (0)"}
-            </button>
-          ))}
+          {(["all", "active", "sold", "draft"] as FilterType[]).map((f) => {
+            const count = f === "all" ? products.length : products.filter((p) => p.status === f).length
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap border transition ${
+                  filter === f
+                    ? "bg-ochre text-white border-ochre shadow-sm"
+                    : "bg-parchment-card text-charcoal-muted border-parchment-border hover:bg-parchment-border/40"
+                }`}
+              >
+                {f} ({count})
+              </button>
+            )
+          })}
         </div>
       </div>
 
       {/* Product List */}
-      <div className="px-5">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-              </svg>
+      <div className="px-5 space-y-4">
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-16 bg-parchment-card rounded-3xl border border-parchment-border p-8">
+            <div className="w-16 h-16 rounded-full bg-parchment flex items-center justify-center mx-auto mb-3 text-3xl">
+              📦
             </div>
-            <p className="text-sm text-gray-500">No products in this category</p>
+            <p className="text-sm font-serif font-bold text-charcoal">No products found</p>
+            <p className="text-xs text-charcoal-muted mt-1">
+              {searchQuery ? "Try clearing your search term" : "Click 'Voice Add' to record your first craft item!"}
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-              >
-                <div className="flex">
-                  <div className="w-24 h-24 bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-3xl">
-                      {product.category === "Textile"
-                        ? "🧵"
-                        : product.category === "Home Decor"
-                        ? "🏠"
-                        : "✨"}
-                    </span>
-                  </div>
-                  <div className="flex-1 p-4 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
-                        {product.title}
-                      </h3>
-                      <Badge variant={product.status === "active" ? "success" : product.status === "sold" ? "muted" : "warning"}>
-                        {product.status}
-                      </Badge>
+          filteredProducts.map((product) => (
+            <div
+              key={product.id}
+              className="bg-parchment-card rounded-3xl border border-parchment-border shadow-organic overflow-hidden transition-all hover:border-ochre/40"
+            >
+              <div className="flex flex-col sm:flex-row">
+                {/* Image / Thumbnail */}
+                <div className="sm:w-36 h-48 sm:h-auto bg-parchment relative flex-shrink-0 border-b sm:border-b-0 sm:border-r border-parchment-border overflow-hidden">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl bg-ochre-fixed/30">
+                      🧵
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{product.summary}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-base font-bold text-gray-900">
+                  )}
+                  <div className="absolute top-3 left-3">
+                    <Badge variant={product.status === "active" ? "success" : product.status === "sold" ? "muted" : "warning"}>
+                      {product.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 p-5 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-ochre">
+                          {product.category}
+                        </span>
+                        <h3 className="text-base font-serif font-bold text-charcoal mt-0.5 line-clamp-1">
+                          {product.title}
+                        </h3>
+                      </div>
+                      <span className="text-base font-serif font-bold text-charcoal shrink-0">
                         ₹{product.price.toLocaleString("en-IN")}
                       </span>
-                      <div className="flex gap-1">
-                        <button className="p-2 rounded-lg hover:bg-gray-50 transition">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                          </svg>
-                        </button>
-                        <button className="p-2 rounded-lg hover:bg-gray-50 transition">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                          </svg>
-                        </button>
-                      </div>
+                    </div>
+
+                    <p className="text-xs text-charcoal-muted mt-2 line-clamp-2 leading-relaxed">
+                      {product.summary || product.heritage_story}
+                    </p>
+
+                    {/* Materials Chips */}
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {product.materials.map((mat, i) => (
+                        <span
+                          key={i}
+                          className="px-2.5 py-0.5 bg-parchment border border-parchment-border rounded-full text-[10px] font-semibold text-charcoal"
+                        >
+                          {mat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions Footer */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-parchment-border">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingProduct(product)}
+                        className="py-1.5 px-3 bg-parchment border border-parchment-border text-charcoal text-xs font-semibold rounded-full hover:bg-parchment-border/40 transition"
+                      >
+                        ✏ Edit
+                      </button>
+                      <button
+                        onClick={() => setExportingProduct(product)}
+                        className="py-1.5 px-3 bg-indigo-fixed/50 text-indigo-dark text-xs font-semibold rounded-full hover:bg-indigo-fixed transition"
+                      >
+                        ⚡ ONDC JSON
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          updateProduct(product.id, {
+                            status: product.status === "active" ? "sold" : "active",
+                          })
+                        }
+                        className="text-xs font-semibold text-ochre hover:underline"
+                      >
+                        Mark as {product.status === "active" ? "Sold" : "Active"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to delete "${product.title}"?`)) {
+                            deleteProduct(product.id)
+                          }
+                        }}
+                        className="text-xs font-semibold text-rose-600 hover:underline ml-2"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         )}
       </div>
+
+      <EditProductModal
+        isOpen={!!editingProduct}
+        onClose={() => setEditingProduct(null)}
+        product={editingProduct}
+        onSave={(id, updated) => updateProduct(id, updated)}
+      />
+
+      <ONDCExportModal
+        isOpen={!!exportingProduct}
+        onClose={() => setExportingProduct(null)}
+        product={exportingProduct}
+        vendor={vendor}
+      />
 
       <BottomNav items={navItems} />
     </main>

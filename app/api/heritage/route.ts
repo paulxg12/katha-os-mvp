@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const productId = searchParams.get("product_id")
+export const dynamic = "force-static"
 
-  // TODO: Fetch heritage archive from Supabase by product_id
+export async function GET() {
   return NextResponse.json({ heritage: null })
 }

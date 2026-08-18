@@ -2,23 +2,26 @@ import { cn } from "@/lib/utils/cn"
 
 interface BadgeProps {
   children: React.ReactNode
-  variant?: "default" | "success" | "warning" | "info" | "muted"
+  variant?: "default" | "success" | "warning" | "info" | "ochre" | "indigo" | "terracotta" | "muted"
   className?: string
 }
 
 const variantClasses = {
-  default: "bg-gray-100 text-gray-700",
-  success: "bg-emerald-100 text-emerald-700",
-  warning: "bg-amber-100 text-amber-700",
-  info: "bg-blue-100 text-blue-700",
-  muted: "bg-gray-50 text-gray-500",
+  default: "bg-parchment-border text-charcoal border-parchment-dark",
+  success: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  warning: "bg-amber-50 text-amber-800 border-amber-200",
+  info: "bg-sky-50 text-sky-800 border-sky-200",
+  ochre: "bg-ochre-fixed text-ochre-dark border-ochre/20",
+  indigo: "bg-indigo-fixed text-indigo-dark border-indigo-brand/20",
+  terracotta: "bg-terracotta-light/40 text-terracotta border-terracotta/20",
+  muted: "bg-parchment-card text-charcoal-muted border-parchment-border",
 }
 
 export function Badge({ children, variant = "default", className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+        "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold tracking-wide border shadow-2xs transition-colors",
         variantClasses[variant],
         className
       )}

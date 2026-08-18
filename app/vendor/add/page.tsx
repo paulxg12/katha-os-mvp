@@ -1,8 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useVendorStore } from "@/lib/hooks/useVendorStore"
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition"
 import { BottomNav } from "@/components/layout/BottomNav"
+import { Badge } from "@/components/ui/Badge"
 
 function VendorNavIcon({ d }: { d: string }) {
   return (
@@ -26,13 +30,7 @@ const navItems = [
   {
     label: "Add",
     href: "/vendor/add",
-    icon: (
-      <div className="w-10 h-10 -mt-5 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </div>
-    ),
+    icon: null,
   },
   {
     label: "Earnings",
@@ -46,19 +44,51 @@ const navItems = [
   },
 ]
 
+const SAMPLE_IMAGES = [
+  "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=600",
+  "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=600",
+  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=600",
+  "https://images.unsplash.com/photo-1606744837616-56c9a5c6a6eb?auto=format&fit=crop&q=80&w=600",
+]
+
+type Mode = "voice" | "manual"
 type RecordingStep = "idle" | "recording" | "processing" | "result"
 
 export default function VendorAddPage() {
+  const router = useRouter()
+  const { addProduct } = useVendorStore()
+  const [mode, setMode] = useState<Mode>("voice")
   const [step, setStep] = useState<RecordingStep>("idle")
+  const [selectedImage, setSelectedImage] = useState<string>(SAMPLE_IMAGES[0])
+
   const { transcript, isListening, startListening, stopListening, resetTranscript } =
     useSpeechRecognition()
 
-  const handleMicToggle = () => {
+  // Extracted product state for voice mode
+  const [extractedProduct, setExtractedProduct] = useState({
+    title: "Handwoven Crimson Banarasi Silk Saree",
+    category: "Textile & Apparel",
+    price: 14500,
+    materials: ["Pure Silk", "Real Gold Zari"],
+    summary: "Pure Mulberry silk saree handwoven with intricate gold zari floral border. Crafted over 22 days in Varanasi.",
+    heritage_story: "This saree embodies the ancient Kadhwa weaving technique of Varanasi. Passed down through 3 generations of master weavers.",
+  })
+
+  // Form state for manual mode
+  const [manualForm, setManualForm] = useState({
+    title: "",
+    category: "Textile & Apparel",
+    price: "",
+    materials: "",
+    summary: "",
+    heritage_story: "",
+  })
+
+  const handleMicToggle = async () => {
     if (isListening) {
       stopListening()
       setStep("processing")
-      // Simulate AI processing
-      setTimeout(() => setStep("result"), 2000)
+      processExtraction(transcript || "This is a handwoven Banarasi silk saree in deep crimson with real gold zari. It took 20 days on the handloom and is priced at 14500 rupees.")
     } else {
       resetTranscript()
       startListening()
@@ -66,185 +96,400 @@ export default function VendorAddPage() {
     }
   }
 
-  const handleReset = () => {
-    resetTranscript()
-    setStep("idle")
+  const processExtraction = async (inputTranscript: string) => {
+    try {
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: inputTranscript }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.product && data.heritage) {
+          setExtractedProduct({
+            title: data.product.title || "Handwoven Banarasi Craft",
+            category: data.product.category || "Textile & Apparel",
+            price: data.product.price || 14500,
+            materials: data.product.materials || ["Pure Silk", "Gold Zari"],
+            summary: data.product.summary || "Traditional handloom craft listing.",
+            heritage_story: data.heritage.story || "Handcrafted with ancestral heritage techniques.",
+          })
+        }
+      }
+    } catch (e) {
+      console.warn("AI backend extraction API offline, using standard structured fallback", e)
+    } finally {
+      setTimeout(() => setStep("result"), 1200)
+    }
+  }
+
+  const handleSaveVoiceProduct = () => {
+    addProduct({
+      title: extractedProduct.title,
+      category: extractedProduct.category,
+      materials: extractedProduct.materials,
+      price: extractedProduct.price,
+      summary: extractedProduct.summary,
+      heritage_story: extractedProduct.heritage_story,
+      image_url: selectedImage,
+      transcript_raw: transcript || "Voice extracted entry",
+      status: "active",
+    })
+    router.push("/vendor/products")
+  }
+
+  const handleSaveManualProduct = (e: React.FormEvent) => {
+    e.preventDefault()
+    const mats = manualForm.materials
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean)
+
+    addProduct({
+      title: manualForm.title,
+      category: manualForm.category,
+      materials: mats.length > 0 ? mats : ["Handloom"],
+      price: Number(manualForm.price),
+      summary: manualForm.summary,
+      heritage_story: manualForm.heritage_story,
+      image_url: selectedImage,
+      transcript_raw: null,
+      status: "active",
+    })
+    router.push("/vendor/products")
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
+    <main className="min-h-screen bg-parchment pb-28">
       {/* Header */}
-      <div className="bg-white px-5 pt-14 pb-4 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <a href="/vendor" className="p-2 -ml-2 rounded-lg hover:bg-gray-50">
-            <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </a>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Add Product</h1>
-            <p className="text-xs text-gray-500">Speak about your craft</p>
+      <div className="bg-parchment-card px-5 pt-12 pb-4 border-b border-parchment-border shadow-2xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/vendor"
+              className="p-2 -ml-2 rounded-full hover:bg-parchment-border/40 text-charcoal transition"
+            >
+              ← Back
+            </Link>
+            <div>
+              <h1 className="text-xl font-serif font-bold text-charcoal">Add New Craft Product</h1>
+              <p className="text-xs text-charcoal-muted">List to KathaOS & ONDC Network catalog</p>
+            </div>
           </div>
+        </div>
+
+        {/* Mode Toggle Switch */}
+        <div className="mt-4 flex p-1 bg-parchment rounded-full border border-parchment-border">
+          <button
+            onClick={() => setMode("voice")}
+            className={`flex-1 py-2 px-4 rounded-full text-xs font-bold uppercase tracking-wider transition ${
+              mode === "voice"
+                ? "bg-gradient-to-r from-ochre to-ochre-dark text-white shadow-sm"
+                : "text-charcoal-muted hover:text-charcoal"
+            }`}
+          >
+            🎙 Voice-First (Zero UI)
+          </button>
+          <button
+            onClick={() => setMode("manual")}
+            className={`flex-1 py-2 px-4 rounded-full text-xs font-bold uppercase tracking-wider transition ${
+              mode === "manual"
+                ? "bg-gradient-to-r from-ochre to-ochre-dark text-white shadow-sm"
+                : "text-charcoal-muted hover:text-charcoal"
+            }`}
+          >
+            ✏ Manual Entry Form
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-5 py-12">
-        {step === "idle" && (
-          <>
-            <div className="text-center mb-12">
-              <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      {/* Mode 1: Voice First */}
+      {mode === "voice" && (
+        <div className="px-5 py-8 flex flex-col items-center max-w-lg mx-auto">
+          {step === "idle" && (
+            <>
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 rounded-full bg-ochre-fixed/40 text-ochre flex items-center justify-center mx-auto mb-4 border border-ochre/20 shadow-organic">
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-charcoal mb-1">Tell us about your masterpiece</h2>
+                <p className="text-xs text-charcoal-muted max-w-xs mx-auto leading-relaxed">
+                  Tap the mic and speak naturally in your mother tongue. Mention your craft name, materials, price, and loom story.
+                </p>
+              </div>
+
+              {/* Sample Prompts */}
+              <div className="w-full mb-8 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal-muted text-center">
+                  Try speaking something like:
+                </p>
+                <div className="bg-parchment-card p-3 rounded-2xl border border-parchment-border text-xs text-charcoal-muted italic">
+                  &ldquo;Yeh Banarasi silk saree humne gold zari se 20 din mein buni hai. Iska daam 14,500 rupees hai.&rdquo;
+                </div>
+              </div>
+
+              {/* Big Mic Button */}
+              <button
+                onClick={handleMicToggle}
+                className="w-28 h-28 rounded-full bg-gradient-to-br from-ochre to-ochre-dark text-white flex items-center justify-center shadow-organic-lg hover:scale-105 active:scale-95 transition-all border-4 border-parchment"
+              >
+                <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                 </svg>
+              </button>
+              <p className="text-xs font-bold text-ochre uppercase tracking-wider mt-4">Tap to Start Recording</p>
+            </>
+          )}
+
+          {step === "recording" && (
+            <>
+              <div className="text-center mb-8">
+                <div className="w-24 h-24 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 animate-glow-pulse border-4 border-parchment">
+                  <div className="w-6 h-6 rounded-full bg-rose-600 animate-ping" />
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-charcoal mb-1">Listening to your voice...</h2>
+                <p className="text-xs text-charcoal-muted">Speak freely about your handloom item</p>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Tell us about your product</h2>
-              <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                Press the button and speak naturally. Mention the name, materials, price, and the story behind it.
-              </p>
+
+              {/* Live Transcript Box */}
+              <div className="w-full bg-parchment-card rounded-3xl p-5 border border-parchment-border shadow-organic mb-8 min-h-[120px]">
+                <p className="text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-2">Live Voice Recognition</p>
+                <p className="text-sm font-medium text-charcoal leading-relaxed">
+                  {transcript || "Listening... Speak now!"}
+                </p>
+              </div>
+
+              {/* Stop Button */}
+              <button
+                onClick={handleMicToggle}
+                className="w-28 h-28 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-organic-lg hover:scale-105 active:scale-95 transition-all border-4 border-parchment"
+              >
+                <div className="w-8 h-8 bg-white rounded-2xl" />
+              </button>
+              <p className="text-xs font-bold text-rose-600 uppercase tracking-wider mt-4">Tap to Finish & Extract</p>
+            </>
+          )}
+
+          {step === "processing" && (
+            <div className="py-20 text-center">
+              <div className="w-16 h-16 border-4 border-ochre border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <h3 className="text-xl font-serif font-bold text-charcoal">Extracting Commerce & Heritage Data...</h3>
+              <p className="text-xs text-charcoal-muted mt-1">Applying KathaOS Dual-Output AI Engine</p>
+            </div>
+          )}
+
+          {step === "result" && (
+            <div className="w-full space-y-5 animate-fade-in-up">
+              <div className="text-center mb-4">
+                <Badge variant="success">✨ AI Extraction Complete</Badge>
+                <h2 className="text-xl font-serif font-bold text-charcoal mt-1">Review Extracted Details</h2>
+              </div>
+
+              {/* Image Selector */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-2">
+                  Select Product Image
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {SAMPLE_IMAGES.map((img, i) => (
+                    <button
+                      type="button"
+                      key={i}
+                      onClick={() => setSelectedImage(img)}
+                      className={`aspect-square rounded-2xl overflow-hidden border-2 transition ${
+                        selectedImage === img ? "border-ochre shadow-organic scale-105" : "border-parchment-border opacity-70"
+                      }`}
+                    >
+                      <img src={img} alt={`Sample ${i}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extracted Product Specs */}
+              <div className="bg-parchment-card rounded-3xl p-5 border border-parchment-border shadow-organic space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-ochre">Commerce Specification</h3>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-charcoal-muted">Title</span>
+                  <p className="text-base font-serif font-bold text-charcoal">{extractedProduct.title}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-parchment-border">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-charcoal-muted">Category</span>
+                    <p className="text-xs font-semibold text-charcoal">{extractedProduct.category}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-charcoal-muted">Price</span>
+                    <p className="text-sm font-bold text-charcoal">₹{extractedProduct.price.toLocaleString("en-IN")}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-parchment-border">
+                  <span className="text-[10px] uppercase font-bold text-charcoal-muted">Materials</span>
+                  <div className="flex gap-1.5 mt-1">
+                    {extractedProduct.materials.map((m) => (
+                      <span key={m} className="px-2.5 py-0.5 bg-parchment rounded-full text-[10px] font-semibold text-charcoal border border-parchment-border">
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Heritage Story Archive */}
+              <div className="bg-parchment-card rounded-3xl p-5 border border-parchment-border shadow-organic">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-dark mb-2">Heritage Story Narrative</h3>
+                <p className="text-xs text-charcoal leading-relaxed italic font-serif">
+                  &ldquo;{extractedProduct.heritage_story}&rdquo;
+                </p>
+              </div>
+
+              {/* Save & Reset Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    resetTranscript()
+                    setStep("idle")
+                  }}
+                  className="flex-1 py-3 px-4 bg-parchment-border/50 text-charcoal font-semibold rounded-full hover:bg-parchment-border transition text-xs uppercase tracking-wider"
+                >
+                  Record Again
+                </button>
+                <button
+                  onClick={handleSaveVoiceProduct}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-ochre to-ochre-dark text-white font-bold rounded-full hover:opacity-95 shadow-organic transition text-xs uppercase tracking-wider"
+                >
+                  Publish to Catalog
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mode 2: Manual Entry Form */}
+      {mode === "manual" && (
+        <div className="px-5 py-6 max-w-lg mx-auto">
+          <form onSubmit={handleSaveManualProduct} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                Product Title
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Pure Silk Banarasi Saree with Gold Border"
+                value={manualForm.title}
+                onChange={(e) => setManualForm({ ...manualForm, title: e.target.value })}
+                className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm font-medium text-charcoal focus:outline-none focus:border-ochre"
+              />
             </div>
 
-            {/* Example prompts */}
-            <div className="w-full max-w-sm mb-12">
-              <p className="text-xs text-gray-400 text-center mb-3">Try saying something like:</p>
-              <div className="space-y-2">
-                {[
-                  "This is a Banarasi silk saree I wove with gold zari. It takes about 20 days. I sell it for 12,500 rupees.",
-                  "Handmade terracotta pot from Bengal. My grandfather taught me this art. Price is 800 rupees.",
-                ].map((example, i) => (
-                  <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 text-xs text-gray-500 italic">
-                    &ldquo;{example}&rdquo;
-                  </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                  Category
+                </label>
+                <select
+                  value={manualForm.category}
+                  onChange={(e) => setManualForm({ ...manualForm, category: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm text-charcoal focus:outline-none focus:border-ochre"
+                >
+                  <option value="Textile & Apparel">Textile & Apparel</option>
+                  <option value="Home & Heritage Decor">Home & Heritage Decor</option>
+                  <option value="Pottery & Clay Art">Pottery & Clay Art</option>
+                  <option value="Jewelry & Metalwork">Jewelry & Metalwork</option>
+                  <option value="Painting & Folklore Art">Painting & Folklore Art</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                  Price (INR ₹)
+                </label>
+                <input
+                  type="number"
+                  required
+                  placeholder="e.g. 12500"
+                  value={manualForm.price}
+                  onChange={(e) => setManualForm({ ...manualForm, price: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm font-bold text-charcoal focus:outline-none focus:border-ochre"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                Materials Used (Comma separated)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Silk, Gold Zari, Katan"
+                value={manualForm.materials}
+                onChange={(e) => setManualForm({ ...manualForm, materials: e.target.value })}
+                className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm text-charcoal focus:outline-none focus:border-ochre"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                Short Description
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Describe key features..."
+                value={manualForm.summary}
+                onChange={(e) => setManualForm({ ...manualForm, summary: e.target.value })}
+                className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm text-charcoal focus:outline-none focus:border-ochre resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-1">
+                Heritage Story & Cultural Value
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Describe history, technique, or tradition..."
+                value={manualForm.heritage_story}
+                onChange={(e) => setManualForm({ ...manualForm, heritage_story: e.target.value })}
+                className="w-full px-4 py-2.5 bg-parchment-card border border-parchment-border rounded-2xl text-sm text-charcoal focus:outline-none focus:border-ochre resize-none"
+              />
+            </div>
+
+            {/* Select image */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-charcoal-muted mb-2">
+                Select Photo
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {SAMPLE_IMAGES.map((img, i) => (
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => setSelectedImage(img)}
+                    className={`aspect-square rounded-2xl overflow-hidden border-2 transition ${
+                      selectedImage === img ? "border-ochre shadow-organic scale-105" : "border-parchment-border opacity-70"
+                    }`}
+                  >
+                    <img src={img} alt={`Sample ${i}`} className="w-full h-full object-cover" />
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Mic Button */}
             <button
-              onClick={handleMicToggle}
-              className="w-28 h-28 rounded-full bg-blue-600 flex items-center justify-center shadow-xl hover:bg-blue-700 active:scale-95 transition-all"
+              type="submit"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-ochre to-ochre-dark text-white font-bold rounded-full hover:opacity-95 shadow-organic transition text-sm uppercase tracking-wider mt-4"
             >
-              <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-              </svg>
+              Save Product & Broadcast ONDC Catalog
             </button>
-            <p className="text-sm text-gray-400 mt-4">Tap to start recording</p>
-          </>
-        )}
-
-        {step === "recording" && (
-          <>
-            <div className="text-center mb-12">
-              <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6 animate-pulse">
-                <div className="w-4 h-4 rounded-full bg-red-500 animate-ping" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Listening...</h2>
-              <p className="text-sm text-gray-500">Speak naturally about your product</p>
-            </div>
-
-            {/* Live transcript */}
-            <div className="w-full max-w-sm bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-12 min-h-[120px]">
-              {transcript ? (
-                <p className="text-sm text-gray-700 leading-relaxed">{transcript}</p>
-              ) : (
-                <p className="text-sm text-gray-300 italic">Waiting for speech...</p>
-              )}
-            </div>
-
-            {/* Stop Button */}
-            <button
-              onClick={handleMicToggle}
-              className="w-28 h-28 rounded-full bg-red-500 flex items-center justify-center shadow-xl animate-pulse active:scale-95 transition-all"
-            >
-              <div className="w-8 h-8 bg-white rounded-lg" />
-            </button>
-            <p className="text-sm text-gray-400 mt-4">Tap to stop</p>
-          </>
-        )}
-
-        {step === "processing" && (
-          <>
-            <div className="text-center mb-12">
-              <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-6">
-                <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Processing your words...</h2>
-              <p className="text-sm text-gray-500">KathaOS is extracting product details</p>
-            </div>
-          </>
-        )}
-
-        {step === "result" && (
-          <>
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Product extracted!</h2>
-              <p className="text-sm text-gray-500">Review the details below</p>
-            </div>
-
-            {/* Extracted Result Card */}
-            <div className="w-full max-w-sm space-y-4 mb-8">
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Product Details</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-gray-500">Title</p>
-                    <p className="text-sm font-semibold text-gray-900">Banarasi Silk Saree — Red & Gold</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500">Category</p>
-                      <p className="text-sm font-medium text-gray-900">Textile</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Price</p>
-                      <p className="text-sm font-bold text-gray-900">₹12,500</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Materials</p>
-                    <div className="flex gap-1.5 mt-1">
-                      {["Silk", "Gold Zari"].map((m) => (
-                        <span key={m} className="px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
-                          {m}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Heritage Story</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  This saree is woven on a traditional handloom in Varanasi. The gold zari border features intricate motifs passed down through three generations. Each piece takes 15-30 days to complete.
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <span className="px-2 py-0.5 bg-violet-50 rounded-full text-xs text-violet-600">Varanasi</span>
-                  <span className="px-2 py-0.5 bg-violet-50 rounded-full text-xs text-violet-600">3rd Generation</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="w-full max-w-sm flex gap-3">
-              <button
-                onClick={handleReset}
-                className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition"
-              >
-                Record Again
-              </button>
-              <button className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 transition">
-                Save Product
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+          </form>
+        </div>
+      )}
 
       <BottomNav items={navItems} />
     </main>

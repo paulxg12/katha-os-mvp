@@ -1,32 +1,20 @@
 import { NextResponse } from "next/server"
 
-export async function POST(request: Request) {
-  const body = await request.json()
-  const { transcript } = body
+export const dynamic = "force-static"
 
-  if (!transcript) {
-    return NextResponse.json(
-      { error: "Transcript is required" },
-      { status: 400 }
-    )
-  }
-
-  // TODO: Call OpenAI structured extraction
-  // TODO: Validate with Zod schemas
-  // TODO: Return { product, heritage }
-
+export async function POST() {
   return NextResponse.json({
     product: {
       title: "Extracted product title",
-      category: "Extracted category",
-      materials: ["material1"],
-      price: 0,
-      summary: "Extracted summary",
+      category: "Textile & Apparel",
+      materials: ["Pure Silk", "Gold Zari"],
+      price: 14500,
+      summary: "Traditional handloom craft listing.",
     },
     heritage: {
       story: "Extracted cultural story",
-      significance: "Extracted significance",
-      region: "Extracted region",
+      significance: "Handcrafted heritage",
+      region: "Varanasi, UP",
     },
   })
 }

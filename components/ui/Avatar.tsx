@@ -3,15 +3,17 @@ import { cn } from "@/lib/utils/cn"
 interface AvatarProps {
   src?: string | null
   name: string
-  size?: "sm" | "md" | "lg" | "xl"
+  size?: "sm" | "md" | "lg" | "xl" | "2xl"
   className?: string
+  showBadge?: boolean
 }
 
 const sizeClasses = {
-  sm: "w-8 h-8 text-xs",
+  sm: "w-9 h-9 text-xs",
   md: "w-12 h-12 text-sm",
   lg: "w-16 h-16 text-lg",
-  xl: "w-24 h-24 text-2xl",
+  xl: "w-20 h-20 text-xl",
+  "2xl": "w-24 h-24 text-2xl",
 }
 
 function getInitials(name: string): string {
@@ -23,42 +25,36 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-function getColorFromName(name: string): string {
-  const colors = [
-    "bg-rose-500",
-    "bg-violet-500",
-    "bg-blue-500",
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-cyan-500",
-    "bg-fuchsia-500",
-    "bg-teal-500",
-  ]
-  const index = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % colors.length
-  return colors[index]
-}
-
-export function Avatar({ src, name, size = "md", className }: AvatarProps) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        className={cn("rounded-full object-cover", sizeClasses[size], className)}
-      />
-    )
-  }
-
+export function Avatar({ src, name, size = "md", className, showBadge = false }: AvatarProps) {
   return (
-    <div
-      className={cn(
-        "rounded-full flex items-center justify-center font-semibold text-white",
-        getColorFromName(name),
-        sizeClasses[size],
-        className
+    <div className="relative inline-block flex-shrink-0">
+      {src ? (
+        <img
+          src={src}
+          alt={name}
+          className={cn(
+            "rounded-full object-cover border-2 border-parchment-border shadow-sm",
+            sizeClasses[size],
+            className
+          )}
+        />
+      ) : (
+        <div
+          className={cn(
+            "rounded-full flex items-center justify-center font-serif font-bold text-white bg-gradient-to-br from-ochre to-ochre-dark border-2 border-parchment-border shadow-sm",
+            sizeClasses[size],
+            className
+          )}
+        >
+          {getInitials(name)}
+        </div>
       )}
-    >
-      {getInitials(name)}
+      {showBadge && (
+        <span
+          className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"
+          title="Verified Master Artisan"
+        />
+      )}
     </div>
   )
 }

@@ -6,6 +6,17 @@ export interface Vendor {
   bio: string | null
   avatar_url: string | null
   phone: string | null
+  email: string | null
+  address: string | null
+  craft_generation: string | null
+  artisan_id: string | null
+  ondc_node_id: string | null
+  ondc_status: "active" | "syncing" | "offline"
+  upi_id: string | null
+  bank_name: string | null
+  account_no: string | null
+  audio_bio_url: string | null
+  portfolio_images: string[]
   joined_at: string
 }
 
@@ -20,6 +31,8 @@ export interface Product {
   image_url: string | null
   transcript_raw: string | null
   status: "active" | "sold" | "draft"
+  ondc_ready?: boolean
+  heritage_story?: string | null
   created_at: string
 }
 
@@ -32,6 +45,17 @@ export interface HeritageArchive {
   language: string | null
   audio_url: string | null
   created_at: string
+}
+
+export interface VendorOrder {
+  id: string
+  order_number: string
+  buyer_name: string
+  product_title: string
+  amount: number
+  status: "processing" | "shipped" | "delivered" | "cancelled"
+  date: string
+  ondc_tx_id: string
 }
 
 export interface BuyerProfile {
